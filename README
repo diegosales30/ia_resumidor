@@ -1,0 +1,10 @@
+
+
+
+```
+  npm create vite@latest
+  npm install @reduxjs/toolkit
+  npm install -D tailwindcss postcss autoprefixer
+    inciar o tailwind -> npx tailwindcss init -p
+
+```
