@@ -1,43 +1,79 @@
 import { useState, useEffect } from "react";
 
 import { copy, linkIcon, loader, tick } from "../assets";
+
 import { useLazyGetSummaryQuery } from "../services/article";
 
-
+const rapidApiKey = import.meta.env.VITE_RAPID_API_TRANSLATE_KEY;
 
 const Demo = () => {
   const [article, setArticle] = useState({
-    url: '',
-    summary: '',
+    url: "",
+    summary: "",
   });
   const [allArticles, setAllArticles] = useState([]);
   const [copied, setCopied] = useState("");
+  const [traduzido, setTraduzido] = useState(null);
+  const [getSummary, { error, isFetching }] = useLazyGetSummaryQuery();
 
-  const [getSummary, {error, isFetching} ] = useLazyGetSummaryQuery();
+  useEffect(() => {
+    const headers = {
+      "X-RapidAPI-Key": rapidApiKey,
+      "X-RapidAPI-Host":
+        "translated-mymemory---translation-memory.p.rapidapi.com",
+    };
+
+    const url = new URL(
+      "https://translated-mymemory---translation-memory.p.rapidapi.com/get"
+    );
+    const params = {
+      langpair: "en|pt",
+      q: article?.summary,
+      mt: "1",
+      onlyprivate: "0",
+      de: "a@b.c",
+    };
+    Object.keys(params).forEach((key) =>
+      url.searchParams.append(key, params[key])
+    );
+
+    async function fetchData() {
+      try {
+        const response = await fetch(url, { headers });
+        const data = await response.json();
+        //console.log(data.responseData);
+        setTraduzido(JSON.stringify(data.responseData?.translatedText));
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    fetchData();
+  }, [article]);
 
   useEffect(() => {
     const articlesFromLocalStorage = JSON.parse(
-      localStorage.getItem('articles'))
+      localStorage.getItem("articles")
+    );
 
-      if(articlesFromLocalStorage) {
-        setAllArticles(articlesFromLocalStorage)
-      }
-  }, [])
-  
+    if (articlesFromLocalStorage) {
+      setAllArticles(articlesFromLocalStorage);
+    }
+  }, []);
 
   const handleSubmit = async (event) => {
-      event.preventDefault()
-      const {data} = await getSummary({articleUrl: article.url});
+    event.preventDefault();
+    const { data } = await getSummary({ articleUrl: article.url });
 
-      if(data?.summary) {
-        const newArticle = {...article, summary: data.summary};
-        const updatedAllArticles = [newArticle, ...allArticles];
+    if (data?.summary) {
+      const newArticle = { ...article, summary: data.summary };
+      const updatedAllArticles = [newArticle, ...allArticles];
 
-        // update state and local storage
-        setArticle(newArticle);
-        setAllArticles(updatedAllArticles);
-        localStorage.setItem('articles', JSON.stringify(updatedAllArticles));
-      }
+      // update state and local storage
+      setArticle(newArticle);
+      setAllArticles(updatedAllArticles);
+      localStorage.setItem("articles", JSON.stringify(updatedAllArticles));
+    }
   };
 
   // copy the url and toggle the icon for user feedback
@@ -46,12 +82,6 @@ const Demo = () => {
     navigator.clipboard.writeText(copyUrl);
     setTimeout(() => setCopied(false), 3000);
   };
-
-  // const handleKeyDown = (e) => {
-  //   if (e.keyCode === 13) {
-  //     handleSubmit(e);
-  //   }
-  // };
 
   return (
     <section className="mt-16 w-full max-w-xl">
@@ -70,7 +100,7 @@ const Demo = () => {
             type="url"
             placeholder="Digite URL"
             value={article.url}
-            onChange={(e) => setArticle({...article, url: e.target.value})}
+            onChange={(e) => setArticle({ ...article, url: e.target.value })}
             required
             className="url_input peer"
           />
@@ -82,50 +112,50 @@ const Demo = () => {
             ↲
           </button>
         </form>
-          {/* {Browse url history} */}
-          <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
-            {allArticles.map((item, index) => (
-              <div 
-                 key={`link-${index}`}
-                 onClick={() => setArticle(item)}
-                 className="link_card"
-                 >
-                  <div className="copy_btn" onClick={() => handleCopy(item.url)}>
-                  <img
+        {/* {Browse url history} */}
+        <div className="flex flex-col gap-1 max-h-60 overflow-y-auto">
+          {allArticles.map((item, index) => (
+            <div
+              key={`link-${index}`}
+              onClick={() => setArticle(item)}
+              className="link_card"
+            >
+              <div className="copy_btn" onClick={() => handleCopy(item.url)}>
+                <img
                   src={copied === item.url ? tick : copy}
                   alt={copied === item.url ? "tick_icon" : "copy_icon"}
-                  className='w-[40%] h-[40%] object-contain'
+                  className="w-[40%] h-[40%] object-contain"
                 />
-                  </div>
-                  <p className="flex-1 font-satoshi text-blue-700 font-medium text-sm truncate">
-                    {item.url}
-                  </p>
               </div>
-            ))}
-
-          </div>
+              <p className="flex-1 font-satoshi text-blue-700 font-medium text-sm truncate">
+                {item.url}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
       {/* Display results */}
-      <div className='my-10 max-w-full flex justify-center items-center'>
+      <div className="my-10 max-w-full flex justify-center items-center">
         {isFetching ? (
-          <img src={loader} alt='loader' className='w-20 h-20 object-contain' />
+          <img src={loader} alt="loader" className="w-20 h-20 object-contain" />
         ) : error ? (
-          <p className='font-inter font-bold text-black text-center'>
-            Oops, algo deu errado...
+          <p className="font-inter font-bold text-black text-center">
+            Oops,atingiu o limite máximo de solicitação.
             <br />
-            <span className='font-satoshi font-normal text-gray-700'>
+            <span className="font-satoshi font-normal text-gray-700">
               {error?.data?.error}
             </span>
           </p>
         ) : (
           article.summary && (
-            <div className='flex flex-col gap-3'>
-              <h2 className='font-satoshi font-bold text-gray-600 text-xl'>
-                Article <span className='blue_gradient'>Summary</span>
+            <div className="flex flex-col gap-3">
+              <h2 className="font-satoshi font-bold text-gray-600 text-xl">
+              Resumo <span className="blue_gradient">do artigo</span>
               </h2>
-              <div className='summary_box'>
-                <p className='font-inter font-medium text-sm text-gray-700'>
-                  {article.summary}
+              <div className="summary_box">
+                <p className="font-inter font-medium text-sm text-gray-700">
+                  {traduzido && traduzido}
+                  {traduzido === null && article?.summary}
                 </p>
               </div>
             </div>
